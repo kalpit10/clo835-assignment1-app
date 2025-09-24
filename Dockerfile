@@ -1,4 +1,4 @@
-FROM python:3.9-slim
+FROM public.ecr.aws/docker/library/python:3.9-slim
 WORKDIR /app
 COPY . /app
 RUN apt-get update && apt-get install -y iputils-ping && rm -rf /var/lib/apt/lists/*
