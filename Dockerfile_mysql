@@ -1,5 +1,5 @@
-FROM mysql:8.0
+# instead of FROM mysql:8.0
+FROM public.ecr.aws/docker/library/mysql:8.0
 
 COPY ./mysql.sql /tmp
-
 CMD [ "mysqld", "--init-file=/tmp/mysql.sql" ]
