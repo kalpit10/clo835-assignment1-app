@@ -1,38 +1,63 @@
-name: Build and Push to ECR
+name: Build & Push to ECR
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+ 
+    env: 
+      AWS_REGION: us-east-1
+      WEB_REPO: clo835-a1-webapp
+      MYSQL_REPO: clo835-a1-mysql
+      IMAGE_TAG: v0.2
+      SHA_TAG: ${{ github.sha }}
 
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v3
+      - name: Checkout 
+        uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: Configure AWS credentials (LabRole temp keys)
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-session-token:     ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region:            us-east-1
+
+      - name: Confirm identity
+        run: aws sts get-caller-identity
 
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+        uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, tag, and push webapp image
+      - name: Build & push web image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          docker build -t webapp:latest -f Dockerfile .
-          docker tag webapp:latest ${{ steps.login-ecr.outputs.registry }}/clo835-a1-webapp:latest
-          docker push ${{ steps.login-ecr.outputs.registry }}/clo835-a1-webapp:latest
+          set -e
+          docker build --pull --no-cache \
+            -t "${REGISTRY}/${WEB_REPO}:${IMAGE_TAG}" \
+            -t "${REGISTRY}/${WEB_REPO}:${SHA_TAG::7}" \
+            -f Dockerfile .
+          docker push "${REGISTRY}/${WEB_REPO}:${IMAGE_TAG}"
+          docker push "${REGISTRY}/${WEB_REPO}:${SHA_TAG::7}"
 
-      - name: Build, tag, and push mysql image
+      - name: Build & push mysql image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          docker build -t mysql:latest -f Dockerfile_mysql .
-          docker tag mysql:latest ${{ steps.login-ecr.outputs.registry }}/clo835-a1-mysql:latest
-          docker push ${{ steps.login-ecr.outputs.registry }}/clo835-a1-mysql:latest
-
+          set -e
+          docker build --pull --no-cache \
+            -t "${REGISTRY}/${MYSQL_REPO}:${IMAGE_TAG}" \
+            -t "${REGISTRY}/${MYSQL_REPO}:${SHA_TAG::7}" \
+            -f Dockerfile_mysql .
+          docker push "${REGISTRY}/${MYSQL_REPO}:${IMAGE_TAG}"
+          docker push "${REGISTRY}/${MYSQL_REPO}:${SHA_TAG::7}
