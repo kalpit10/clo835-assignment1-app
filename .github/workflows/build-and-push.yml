@@ -60,4 +60,4 @@ jobs:
             -t "${REGISTRY}/${MYSQL_REPO}:${SHA_TAG::7}" \
             -f Dockerfile_mysql .
           docker push "${REGISTRY}/${MYSQL_REPO}:${IMAGE_TAG}"
-          docker push "${REGISTRY}/${MYSQL_REPO}:${SHA_TAG::7}
+          docker push "${REGISTRY}/${MYSQL_REPO}:${SHA_TAG::7}"
